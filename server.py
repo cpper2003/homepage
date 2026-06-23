@@ -2,12 +2,14 @@
 Claude Code HTTP Bridge
 手机 → GitHub Pages → 隧道 → 此服务 → claude CLI → 返回结果
 启动: python server.py
+      python server.py --tunnel   (自动启动 ngrok 隧道)
 端口: 9876
 """
 
 import http.server
 import json
 import subprocess
+import sys
 import sys
 import os
 import time
@@ -141,6 +143,8 @@ class ClaudeHandler(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    use_tunnel = "--tunnel" in sys.argv
+
     print(f"""
 ╔══════════════════════════════════════╗
 ║   🤖 Claude Code HTTP Bridge       ║
@@ -150,13 +154,37 @@ if __name__ == "__main__":
 ║  超时: {TIMEOUT}s                       ║
 ╚══════════════════════════════════════╝
 """)
+
+    tunnel_url = None
+    if use_tunnel:
+        print("🔗 启动 ngrok 隧道...")
+        try:
+            from pyngrok import ngrok
+            token_file = os.path.join(os.path.dirname(__file__), ".ngrok-token")
+            if os.path.exists(token_file):
+                with open(token_file) as f:
+                    ngrok.set_auth_token(f.read().strip())
+            tunnel = ngrok.connect(PORT, "http")
+            tunnel_url = tunnel.public_url
+            print(f"✅ 公网地址: {tunnel_url}")
+        except Exception as e:
+            print(f"⚠ ngrok 隧道启动失败: {e}")
+            print("  手动启动: powershell -File start-tunnel.ps1")
+
     server = http.server.ThreadingHTTPServer(("0.0.0.0", PORT), ClaudeHandler)
     print(f"✅ 服务已启动: http://localhost:{PORT}")
     print(f"   健康检查: http://localhost:{PORT}/api/health")
     print(f"   发送消息: POST http://localhost:{PORT}/api/chat?token={TOKEN}")
+    if tunnel_url:
+        print(f"")
+        print(f"📱 手机访问: {tunnel_url}")
+        print(f"   (在网页聊天设置中填入此地址)")
     print(f"\n按 Ctrl+C 停止\n")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print("\n👋 服务已停止")
+        if tunnel_url:
+            try: ngrok.disconnect(tunnel_url)
+            except: pass
         server.shutdown()
