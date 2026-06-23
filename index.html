@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的主页</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --green: #4ade80;
+    --border: #334155;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ---- 头像 + 欢迎 ---- */
+  .hero {
+    text-align: center;
+    padding: 30px 0 10px;
+  }
+  .hero .avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    margin: 0 auto 16px;
+    box-shadow: 0 0 30px rgba(56,189,248,0.3);
+  }
+  .hero h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .hero .sub {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* ---- 卡片 ---- */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    transition: transform 0.2s;
+  }
+  .card:active { transform: scale(0.98); }
+  .card h2 {
+    font-size: 14px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  /* ---- 时钟 ---- */
+  .clock {
+    text-align: center;
+    padding: 24px;
+  }
+  .clock .time {
+    font-size: 56px;
+    font-weight: 300;
+    letter-spacing: -2px;
+    font-variant-numeric: tabular-nums;
+    font-family: "SF Mono", "JetBrains Mono", "Consolas", monospace;
+  }
+  .clock .date {
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  /* ---- 快捷链接 ---- */
+  .links {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .link-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 8px;
+    text-align: center;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.2s;
+  }
+  .link-item:hover { border-color: var(--accent); }
+  .link-item .icon { font-size: 28px; margin-bottom: 6px; }
+  .link-item .label { font-size: 12px; color: var(--muted); }
+
+  /* ---- 状态标签 ---- */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(74,222,128,0.15);
+    color: var(--green);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .status-badge::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ---- footer ---- */
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 20px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- 头像区 -->
+  <div class="hero">
+    <div class="avatar">👋</div>
+    <h1>你好！</h1>
+    <p class="sub">欢迎来到我的主页</p>
+  </div>
+
+  <!-- 时钟 -->
+  <div class="card clock">
+    <h2>🕐 当前时间</h2>
+    <div class="time" id="time">--:--:--</div>
+    <div class="date" id="date">----年--月--日 星期-</div>
+  </div>
+
+  <!-- 快速链接 -->
+  <div class="card">
+    <h2>🔗 常用链接</h2>
+    <div class="links">
+      <a class="link-item" href="https://github.com" target="_blank">
+        <div class="icon">🐙</div>
+        <div class="label">GitHub</div>
+      </a>
+      <a class="link-item" href="https://www.google.com" target="_blank">
+        <div class="icon">🔍</div>
+        <div class="label">搜索</div>
+      </a>
+      <a class="link-item" href="https://www.youtube.com" target="_blank">
+        <div class="icon">▶️</div>
+        <div class="label">视频</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- 状态 -->
+  <div class="card">
+    <h2>📡 状态</h2>
+    <p style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="color:var(--muted);">页面状态</span>
+      <span class="status-badge">在线</span>
+    </p>
+    <p style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
+      <span style="color:var(--muted);">访问来源</span>
+      <span style="font-size:13px;" id="device">--</span>
+    </p>
+  </div>
+
+  <div class="footer">
+    Powered by GitHub Pages
+  </div>
+
+</div>
+
+<script>
+  // 实时时钟
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    document.getElementById('time').textContent = h + ':' + m + ':' + s;
+
+    const days = ['日','一','二','三','四','五','六'];
+    const y = now.getFullYear();
+    const mo = now.getMonth() + 1;
+    const d = now.getDate();
+    const day = days[now.getDay()];
+    document.getElementById('date').textContent = y + '年' + mo + '月' + d + '日 星期' + day;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // 设备检测
+  const ua = navigator.userAgent;
+  const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(ua);
+  document.getElementById('device').textContent = isMobile ? '📱 手机' : '💻 电脑';
+</script>
+
+</body>
+</html>
