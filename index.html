@@ -201,6 +201,63 @@
 
   .feature-card { cursor:pointer; }
 
+  /* ---- 聊天 ---- */
+  .chat-card-btn {
+    width:100%; padding:14px; margin-top:8px;
+    background: linear-gradient(135deg, #a855f7, #6366f1);
+    border:none; border-radius:12px; color:#fff; font-size:16px;
+    font-weight:600; cursor:pointer; transition:all 0.2s;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .chat-card-btn:hover { opacity:0.9; transform:translateY(-1px); }
+  .chat-card-btn:active { transform:scale(0.98); }
+
+  .chat-messages {
+    display:flex; flex-direction:column; gap:10px;
+    min-height:200px; max-height:50vh; overflow-y:auto;
+    margin-bottom:12px; padding:4px;
+  }
+  .chat-msg { max-width:90%; padding:10px 14px; border-radius:14px; font-size:14px; line-height:1.5; word-break:break-word; }
+  .chat-msg.user {
+    align-self:flex-end; background:linear-gradient(135deg, var(--accent), var(--accent2));
+    color:#fff; border-bottom-right-radius:4px;
+  }
+  .chat-msg.bot {
+    align-self:flex-start; background:var(--border); color:var(--text);
+    border-bottom-left-radius:4px;
+  }
+  .chat-msg.bot pre { background:var(--bg); padding:8px; border-radius:8px; overflow-x:auto; font-size:12px; margin:4px 0; }
+  .chat-msg.bot code { background:var(--bg); padding:1px 4px; border-radius:4px; font-size:12px; }
+
+  .chat-input-row { display:flex; gap:8px; }
+  .chat-input-row input {
+    flex:1; padding:10px 14px; background:var(--bg);
+    border:1px solid var(--border); border-radius:10px;
+    color:var(--text); font-size:14px; outline:none;
+  }
+  .chat-input-row input:focus { border-color:#a855f7; }
+  .chat-send-btn {
+    padding:10px 18px; background:linear-gradient(135deg, #a855f7, #6366f1);
+    border:none; border-radius:10px; color:#fff; font-size:14px;
+    font-weight:600; cursor:pointer; white-space:nowrap;
+  }
+  .chat-send-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+  .chat-loading { display:flex; gap:6px; padding:10px 14px; align-self:flex-start; }
+  .chat-loading span {
+    width:8px; height:8px; border-radius:50%; background:var(--muted);
+    animation:dotBounce 1.4s infinite ease-in-out both;
+  }
+  .chat-loading span:nth-child(1) { animation-delay:-0.32s; }
+  .chat-loading span:nth-child(2) { animation-delay:-0.16s; }
+  @keyframes dotBounce { 0%,80%,100% { transform:scale(0); } 40% { transform:scale(1); } }
+
+  .chat-url-bar {
+    font-size:11px; color:var(--muted); text-align:center;
+    margin-bottom:8px; cursor:pointer;
+  }
+  .chat-url-bar:hover { color:var(--accent); }
+
   /* ---- footer ---- */
   .footer {
     text-align: center;
@@ -253,6 +310,15 @@
     <div class="links" id="features-container"></div>
   </div>
 
+  <!-- Claude 聊天 -->
+  <div class="card">
+    <h2>🤖 Claude Code</h2>
+    <p style="color:var(--muted);font-size:13px;">通过 AI 助手远程控制电脑</p>
+    <button class="chat-card-btn" onclick="openChat()">
+      💬 开始对话
+    </button>
+  </div>
+
   <!-- 状态 -->
   <div class="card">
     <h2>📡 状态</h2>
@@ -284,6 +350,29 @@
       <button class="modal-execute" onclick="executeFeature()">执行</button>
     </div>
     <div class="modal-result" id="modal-result"></div>
+  </div>
+</div>
+
+<!-- 聊天模态框 -->
+<div class="modal-overlay" id="chat-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="modal-title">🤖 Claude Code</div>
+      <button class="modal-close" onclick="closeChat()">&times;</button>
+    </div>
+    <div class="chat-url-bar" id="chat-url-bar" onclick="setServerUrl()" title="点击设置服务器地址">
+      ⚠ 未配置服务器
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div style="text-align:center;color:var(--muted);font-size:13px;padding:20px;">
+        👋 我是 Claude Code，可以帮你查资料、写代码、回答问题<br>
+        <span style="font-size:11px;">请先确保电脑上的 server.py 已启动，隧道已建立</span>
+      </div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" placeholder="输入消息..." onkeydown="if(event.key==='Enter')sendChat()">
+      <button class="chat-send-btn" id="chat-send-btn" onclick="sendChat()">发送</button>
+    </div>
   </div>
 </div>
 
@@ -453,6 +542,135 @@
     }
     renderFeatures();
   });
+
+  // =============================================
+  // 聊天系统
+  // =============================================
+  var chatHistory = [];
+  var SERVER_URL = localStorage.getItem('cc_server_url') || '';
+
+  function setServerUrl() {
+    var url = prompt('请输入 Claude 服务器的地址:\n(隧道 URL 或局域网 IP，不含末尾斜杠)', SERVER_URL);
+    if (url !== null) {
+      SERVER_URL = url.trim().replace(/\/+$/, '');
+      localStorage.setItem('cc_server_url', SERVER_URL);
+      updateChatUrlBar();
+    }
+  }
+
+  function updateChatUrlBar() {
+    var bar = document.getElementById('chat-url-bar');
+    if (SERVER_URL) {
+      bar.textContent = '🔗 ' + SERVER_URL + ' (点击修改)';
+      bar.style.color = 'var(--green)';
+    } else {
+      bar.textContent = '⚠ 未配置服务器 (点击设置)';
+      bar.style.color = '#fbbf24';
+    }
+  }
+
+  function openChat() {
+    var overlay = document.getElementById('chat-overlay');
+    document.getElementById('chat-input').value = '';
+    updateChatUrlBar();
+    overlay.classList.add('show');
+    document.getElementById('chat-input').focus();
+  }
+
+  function closeChat() {
+    document.getElementById('chat-overlay').classList.remove('show');
+  }
+
+  function addMessage(role, text) {
+    var msgs = document.getElementById('chat-messages');
+    // 清空初始提示
+    if (chatHistory.length === 0) { msgs.innerHTML = ''; }
+    chatHistory.push({ role: role, text: text });
+
+    var div = document.createElement('div');
+    div.className = 'chat-msg ' + (role === 'user' ? 'user' : 'bot');
+    div.textContent = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function showLoading() {
+    var msgs = document.getElementById('chat-messages');
+    var div = document.createElement('div');
+    div.className = 'chat-loading';
+    div.id = 'chat-loading';
+    div.innerHTML = '<span></span><span></span><span></span>';
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function hideLoading() {
+    var el = document.getElementById('chat-loading');
+    if (el) { el.remove(); }
+  }
+
+  function sendChat() {
+    var input = document.getElementById('chat-input');
+    var btn = document.getElementById('chat-send-btn');
+    var prompt = input.value.trim();
+    if (!prompt) return;
+
+    if (!SERVER_URL) {
+      setServerUrl();
+      if (!SERVER_URL) return;
+    }
+
+    addMessage('user', prompt);
+    input.value = '';
+    btn.disabled = true;
+    btn.textContent = '...';
+    showLoading();
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', SERVER_URL + '/api/chat?token=cc', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 130000;  // 略大于服务端超时
+
+    xhr.onload = function() {
+      hideLoading();
+      btn.disabled = false;
+      btn.textContent = '发送';
+      input.focus();
+
+      try {
+        var resp = JSON.parse(xhr.responseText);
+        addMessage('bot', resp.response || '(空响应)');
+      } catch(e) {
+        addMessage('bot', '❌ 响应解析失败: ' + xhr.responseText.slice(0, 200));
+      }
+    };
+
+    xhr.onerror = function() {
+      hideLoading();
+      btn.disabled = false;
+      btn.textContent = '发送';
+      addMessage('bot', '❌ 连接失败！请检查:\n1. 电脑上 server.py 是否在运行\n2. 隧道是否正常\n3. 服务器地址是否正确');
+    };
+
+    xhr.ontimeout = function() {
+      hideLoading();
+      btn.disabled = false;
+      btn.textContent = '发送';
+      addMessage('bot', '⏱️ 请求超时（2分钟），请尝试简化问题');
+    };
+
+    xhr.send(JSON.stringify({ prompt: prompt }));
+  }
+
+  // 初始化聊天相关的 DOM 事件
+  (function initChat() {
+    var overlay = document.getElementById('chat-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) closeChat();
+      });
+    }
+  })();
 </script>
 
 </body>
