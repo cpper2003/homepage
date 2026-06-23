@@ -145,6 +145,62 @@
     50% { opacity: 0.3; }
   }
 
+  /* ---- 模态框 ---- */
+  .modal-overlay {
+    display: none; position: fixed; top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.6); z-index:1000;
+    align-items: center; justify-content: center; padding: 20px;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-dialog {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px;
+    width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto;
+    animation: modalIn 0.25s ease;
+  }
+  @keyframes modalIn {
+    from { opacity:0; transform: translateY(20px) scale(0.96); }
+    to { opacity:1; transform: translateY(0) scale(1); }
+  }
+  .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .modal-title { font-size:18px; font-weight:600; }
+  .modal-close { background:none; border:none; color:var(--muted); font-size:24px; cursor:pointer; padding:4px 8px; border-radius:8px; }
+  .modal-close:hover { background:rgba(255,255,255,0.1); }
+
+  .modal-field { margin-bottom:14px; }
+  .modal-field label { display:block; font-size:13px; color:var(--muted); margin-bottom:6px; font-weight:500; }
+  .modal-field input, .modal-field textarea, .modal-field select {
+    width:100%; padding:10px 12px; background:var(--bg);
+    border:1px solid var(--border); border-radius:10px;
+    color:var(--text); font-size:14px; outline:none; transition:border-color 0.2s;
+  }
+  .modal-field input:focus, .modal-field textarea:focus, .modal-field select:focus { border-color:var(--accent); }
+  .modal-field textarea { min-height:80px; resize:vertical; }
+  .modal-field select { appearance:none; cursor:pointer; }
+
+  .modal-execute {
+    width:100%; padding:12px; margin-top:8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border:none; border-radius:10px; color:#fff; font-size:15px;
+    font-weight:600; cursor:pointer; transition:opacity 0.2s;
+  }
+  .modal-execute:hover { opacity:0.9; }
+  .modal-execute:active { transform:scale(0.98); }
+
+  .modal-result { margin-top:16px; padding:14px; background:var(--bg); border-radius:10px; }
+  .result-label { font-size:12px; color:var(--muted); margin-bottom:6px; }
+  .result-value { font-size:18px; font-weight:600; color:var(--accent); word-break:break-all; }
+  .result-error { font-size:14px; color:#f87171; }
+
+  @media (max-width: 480px) {
+    .modal-overlay { align-items:flex-end; padding:0; }
+    .modal-dialog { max-width:100%; border-radius:16px 16px 0 0; max-height:85vh; animation:slideUp 0.3s ease; }
+    @keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+  }
+
+  .feature-card { cursor:pointer; }
+
   /* ---- footer ---- */
   .footer {
     text-align: center;
@@ -191,6 +247,12 @@
     </div>
   </div>
 
+  <!-- 功能 -->
+  <div class="card" id="features-section" style="display:none;">
+    <h2>🧩 功能</h2>
+    <div class="links" id="features-container"></div>
+  </div>
+
   <!-- 状态 -->
   <div class="card">
     <h2>📡 状态</h2>
@@ -208,6 +270,21 @@
     Powered by GitHub Pages
   </div>
 
+</div>
+
+<!-- 功能模态框 -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">功能</div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div id="modal-inputs"></div>
+    <div id="modal-execute-wrap">
+      <button class="modal-execute" onclick="executeFeature()">执行</button>
+    </div>
+    <div class="modal-result" id="modal-result"></div>
+  </div>
 </div>
 
 <script>
@@ -233,6 +310,149 @@
   const ua = navigator.userAgent;
   const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(ua);
   document.getElementById('device').textContent = isMobile ? '📱 手机' : '💻 电脑';
+
+  // =============================================
+  // 功能系统
+  // =============================================
+  var FEATURES = [
+    // BMI计算
+    {
+      id: 'bmi',
+      name: 'BMI计算',
+      icon: '⚖️',
+      description: '计算身体质量指数',
+      inputs: [
+        { id: 'weight', label: '体重 (kg)', type: 'number', placeholder: '例如 70' },
+        { id: 'height', label: '身高 (cm)', type: 'number', placeholder: '例如 175' }
+      ],
+      handler: function(values) { var h = values.height / 100; var bmi = values.weight / (h * h); var tips = ''; if (bmi < 18.5) tips = ' (偏瘦)'; else if (bmi < 24) tips = ' (正常)'; else if (bmi < 28) tips = ' (偏胖)'; else tips = ' (肥胖)'; return { type: 'text', value: bmi.toFixed(1) + tips }; },
+      resultLabel: 'BMI 指数'
+    },
+    // <<<FEATURES>>>
+  ];
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderFeatures() {
+    var container = document.getElementById('features-container');
+    if (!container) return;
+    var section = document.getElementById('features-section');
+    if (FEATURES.length === 0) {
+      if (section) section.style.display = 'none';
+      return;
+    }
+    if (section) section.style.display = 'block';
+    container.innerHTML = '';
+    for (var i = 0; i < FEATURES.length; i++) {
+      var f = FEATURES[i];
+      var card = document.createElement('div');
+      card.className = 'link-item feature-card';
+      card.setAttribute('data-feature-id', f.id);
+      card.onclick = (function(id){ return function(){ openFeature(id); }; })(f.id);
+      card.innerHTML = '<div class="icon">' + f.icon + '</div><div class="label">' + escHtml(f.name) + '</div>';
+      container.appendChild(card);
+    }
+  }
+
+  function openFeature(featureId) {
+    var feature = null;
+    for (var i = 0; i < FEATURES.length; i++) {
+      if (FEATURES[i].id === featureId) { feature = FEATURES[i]; break; }
+    }
+    if (!feature) return;
+
+    var overlay = document.getElementById('modal-overlay');
+    document.getElementById('modal-title').textContent = feature.icon + ' ' + feature.name;
+    document.getElementById('modal-result').innerHTML = '';
+
+    var html = '';
+    if (feature.inputs && feature.inputs.length > 0) {
+      for (var j = 0; j < feature.inputs.length; j++) {
+        var inp = feature.inputs[j];
+        html += '<div class="modal-field"><label for="input-' + inp.id + '">' + escHtml(inp.label) + '</label>';
+        if (inp.type === 'textarea') {
+          html += '<textarea id="input-' + inp.id + '" placeholder="' + escHtml(inp.placeholder || '') + '"></textarea>';
+        } else if (inp.type === 'select' && inp.options) {
+          html += '<select id="input-' + inp.id + '">';
+          for (var k = 0; k < inp.options.length; k++) {
+            html += '<option value="' + escHtml(inp.options[k]) + '">' + escHtml(inp.options[k]) + '</option>';
+          }
+          html += '</select>';
+        } else {
+          html += '<input type="' + (inp.type === 'number' ? 'number' : 'text') + '" id="input-' + inp.id + '" placeholder="' + escHtml(inp.placeholder || '') + '">';
+        }
+        html += '</div>';
+      }
+      document.getElementById('modal-execute-wrap').style.display = 'block';
+    } else {
+      document.getElementById('modal-execute-wrap').style.display = 'none';
+    }
+    document.getElementById('modal-inputs').innerHTML = html;
+    overlay.dataset.featureId = featureId;
+    overlay.classList.add('show');
+
+    // 清理之前的定时器
+    if (overlay._intervals) {
+      for (var li = 0; li < overlay._intervals.length; li++) {
+        clearInterval(overlay._intervals[li]);
+      }
+      overlay._intervals = null;
+    }
+  }
+
+  function executeFeature() {
+    var overlay = document.getElementById('modal-overlay');
+    var featureId = overlay.dataset.featureId;
+    var feature = null;
+    for (var i = 0; i < FEATURES.length; i++) {
+      if (FEATURES[i].id === featureId) { feature = FEATURES[i]; break; }
+    }
+    if (!feature) return;
+
+    var values = {};
+    if (feature.inputs) {
+      for (var j = 0; j < feature.inputs.length; j++) {
+        var inp = feature.inputs[j];
+        var el = document.getElementById('input-' + inp.id);
+        if (el) {
+          values[inp.id] = inp.type === 'number' ? parseFloat(el.value) || 0 : el.value;
+        }
+      }
+    }
+
+    var resultEl = document.getElementById('modal-result');
+    try {
+      var result = feature.handler(values);
+      resultEl.innerHTML = '<div class="result-label">' + escHtml(feature.resultLabel || '结果') + '</div>' +
+        '<div class="result-value">' + (result.type === 'html' ? result.value : escHtml(result.value)) + '</div>';
+    } catch (e) {
+      resultEl.innerHTML = '<div class="result-error">' + escHtml(e.message || '执行出错') + '</div>';
+    }
+  }
+
+  function closeModal() {
+    var overlay = document.getElementById('modal-overlay');
+    overlay.classList.remove('show');
+    if (overlay._intervals) {
+      for (var i = 0; i < overlay._intervals.length; i++) {
+        clearInterval(overlay._intervals[i]);
+      }
+      overlay._intervals = null;
+    }
+  }
+
+  // 初始化
+  document.addEventListener('DOMContentLoaded', function() {
+    var overlay = document.getElementById('modal-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) closeModal();
+      });
+    }
+    renderFeatures();
+  });
 </script>
 
 </body>
